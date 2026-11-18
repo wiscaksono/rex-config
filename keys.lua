@@ -5,3 +5,4 @@ rex.bind("cmd+s", "client.sidebar.toggle")
 
 -- Actions
 rex.bind("ctrl+cmd+p", "polaris_repo")
+rex.bind("alt+cmd+o", "dev_pick")

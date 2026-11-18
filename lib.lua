@@ -60,4 +60,50 @@ function M.dirs_under(root, subtitle)
   return items
 end
 
+-- Project folders under root: every folder one and two levels deep, plus
+-- deeper ones that are their own repository. Items are ready for rex.ui.pick.
+function M.project_dirs(root)
+  local find_cmd = "find . -maxdepth 3 -type d "
+    .. "-not -path '*/.git*' -not -path '*/node_modules*' -not -path '*/dist*' "
+    .. "-not -path '*/build*' -not -path '*/target*' -not -path '*/vendor*' "
+    .. "-not -path '*/.next*'"
+
+  local script = table.concat({
+    'cd "$1" || exit 1',
+    find_cmd .. " |",
+    "while IFS= read -r d; do",
+    "  rel=${d#./}",
+    '  [ -z "$rel" ] && continue',
+    '  [ "$rel" = "." ] && continue',
+    '  case "$rel" in',
+    '    */*/*) [ -e "$rel/.git" ] && printf "%s\\n" "$rel" ;;',
+    '    *) printf "%s\\n" "$rel" ;;',
+    "  esac",
+    "done",
+  }, "\n")
+
+  local r, err = rex.exec { "sh", "-c", script, "sh", root }
+  if r == nil then
+    error(err, 0)
+  end
+  if r.stdout == "" and not r.ok then
+    error("list " .. root .. ": " .. r.stderr, 0)
+  end
+
+  local items = {}
+  for rel in r.stdout:gmatch("[^\n]+") do
+    rel = rel:gsub("/+$", "")
+    items[#items + 1] = {
+      id = root .. "/" .. rel,
+      title = rel,
+      subtitle = (root:gsub("^" .. os.getenv("HOME"), "~")),
+      icon = "folder",
+    }
+  end
+  table.sort(items, function(a, b)
+    return a.title < b.title
+  end)
+  return items
+end
+
 return M
