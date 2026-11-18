@@ -4,8 +4,9 @@ local M = {}
 
 local shell = "com.superlogical.terminal.shell"
 
--- Open a window with a shell in dir, and return the new window's ID.
-function M.open_dir(dir)
+-- Open a window with a shell in dir, focus it, and return the new IDs.
+-- When ctx carries a client, that app is asked to show the new window too.
+function M.open_dir(dir, ctx)
   local w, err = rex.session.new_window {
     layout = rex.layout.block {
       flavor = shell,
@@ -15,7 +16,20 @@ function M.open_dir(dir)
   if w == nil then
     error(err or "new_window failed", 0)
   end
-  return { window_id = w.window_id }
+
+  local block_id = w.block_ids and w.block_ids[1] or nil
+  if block_id ~= nil then
+    rex.session.focus_block { block_id = block_id }
+  end
+
+  if ctx ~= nil and ctx.client_id ~= nil then
+    pcall(rex.client.queue, "session.select", {
+      session_id = ctx.session_id or rex.session_id,
+      window_id = w.window_id,
+    })
+  end
+
+  return { window_id = w.window_id, block_id = block_id }
 end
 
 -- List the directories directly under root, as items for rex.ui.pick.
