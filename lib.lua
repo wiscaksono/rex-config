@@ -60,6 +60,35 @@ function M.dirs_under(root, subtitle)
   return items
 end
 
+-- Programs that handle their own directional keys, so a key function bound to
+-- one of these keys must return false and let the key reach the terminal.
+local editors = { nvim = true, vim = true, vi = true }
+
+local terminal = "com.superlogical.terminal"
+
+-- The program in the foreground of a terminal block, or nil.
+function M.foreground_name(block_id)
+  if block_id == nil then
+    return nil
+  end
+  local p = rex.block.call(terminal, "process", { block_id = block_id })
+  return p and p.foreground and p.foreground.name or nil
+end
+
+-- Bind a key that moves focus in a direction, unless an editor has it.
+function M.bind_focus(key, direction)
+  rex.bind(key, function(ctx)
+    if editors[M.foreground_name(ctx.block_id)] then
+      return false
+    end
+    local r, err = rex.session.focus_direction { direction = direction, wrap = true }
+    if r == nil then
+      rex.log("warn", err or "focus_direction failed")
+    end
+    return true
+  end)
+end
+
 -- Project folders under root: every folder one and two levels deep, plus
 -- deeper ones that are their own repository. Items are ready for rex.ui.pick.
 function M.project_dirs(root)
