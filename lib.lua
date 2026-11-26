@@ -60,9 +60,10 @@ function M.dirs_under(root, subtitle)
   return items
 end
 
--- Programs that handle their own directional keys, so a key function bound to
--- one of these keys must return false and let the key reach the terminal.
-local editors = { nvim = true, vim = true, vi = true }
+-- Programs that handle ctrl+hjkl themselves. A key bound to those keys returns
+-- false for these, so the key reaches the terminal. Add a program here when a
+-- TUI moves around with ctrl+hjkl and Rex keeps stealing the keys.
+local self_navigating = { nvim = true, vim = true, vi = true, ajsdb = true }
 
 local terminal = "com.superlogical.terminal"
 
@@ -78,7 +79,7 @@ end
 -- Bind a key that moves focus in a direction, unless an editor has it.
 function M.bind_focus(key, direction)
   rex.bind(key, function(ctx)
-    if editors[M.foreground_name(ctx.block_id)] then
+    if self_navigating[M.foreground_name(ctx.block_id)] then
       return false
     end
     M.nav_focus(direction, true)
